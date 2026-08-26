@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#141d2b" />
+  <meta name="description" content="FEED dashboard, roles &amp; workflow, and CSWD admin demo — single portable HTML file." />
+  <title>FEED &amp; CSWD — complete demo (single file)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+/* FEED / CSWD — shared design tokens */
+:root {
+  --navy: #1a2537;
+  --navy-deep: #141d2b;
+  --bg-page: #f0f2f5;
+  --white: #fff;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --accent-blue: #3b82f6;
+  --accent-sky: #38bdf8;
+  --red: #dc2626;
+  --green: #16a34a;
+  --amber: #f59e0b;
+  --yellow-banner: #eab308;
+  --orange: #ea580c;
+  --card-radius: 12px;
+  --shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+  --font: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 15px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg-page);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Site switcher (all pages) */
+.site-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: calc(0.65rem + env(safe-area-inset-top, 0px)) calc(1.25rem + env(safe-area-inset-right, 0px))
+    0.65rem calc(1.25rem + env(safe-area-inset-left, 0px));
+  background: var(--navy-deep);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.site-switch span {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.75rem;
+  margin-right: 0.5rem;
+}
+.site-switch a {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.08);
+}
+.site-switch a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.site-switch a.is-active {
+  background: rgba(56, 189, 248, 0.25);
+  color: var(--white);
+}
+
+/* ========== FEED layout ========== */
+.feed-app {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 44px);
+}
+
+.feed-sidebar {
+  background: var(--navy);
+  color: var(--white);
+  padding: 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.feed-sidebar nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0.75rem;
+}
+
+.feed-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  min-height: 44px;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.08);
+}
+.feed-nav-item svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0.85;
+}
+.feed-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.feed-nav-item.is-active {
+  background: rgba(56, 189, 248, 0.22);
+  color: var(--white);
+}
+
+.feed-sidebar-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+.feed-sidebar-footer svg {
+  width: 22px;
+  height: 22px;
+}
+
+.feed-main-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.feed-header {
+  background: var(--navy);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.5rem;
+  gap: 1rem;
+}
+
+.feed-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.feed-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #38bdf8, #6366f1, #f472b6);
+  display: grid;
+  place-items: center;
+}
+.feed-logo svg {
+  width: 22px;
+  height: 22px;
+  color: white;
+}
+.feed-brand h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.feed-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.feed-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+.feed-user-info strong {
+  font-size: 0.9rem;
+}
+.feed-user-info small {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.75rem;
+}
+.feed-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+.feed-user-block {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: default;
+}
+.feed-user-block svg.chev {
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+.feed-notify {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: #ec4899;
+  border: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: white;
+  -webkit-tap-highlight-color: transparent;
+}
+.feed-notify svg {
+  width: 20px;
+  height: 20px;
+}
+
+.feed-content {
+  padding: 1.25rem 1.5rem 2rem;
+  flex: 1;
+}
+
+.feed-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  grid-template-rows: auto auto 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .feed-app {
+    grid-template-columns: 1fr;
+  }
+  .feed-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0.75rem;
+  }
+  .feed-sidebar nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .feed-sidebar-footer {
+    border-top: none;
+    width: 100%;
+  }
+  .feed-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card-body {
+  padding: 1rem 1.15rem;
+}
+
+.card-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Donation overview */
+.overview-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.overview-metrics strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+.overview-banner {
+  margin-top: 1rem;
+  background: linear-gradient(90deg, #eab308, #facc15);
+  color: #422006;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.overview-banner svg {
+  flex-shrink: 0;
+}
+
+/* Barangay status */
+.status-head {
+  background: var(--red);
+  color: var(--white);
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 0;
+}
+.status-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.88rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.status-list li:last-child {
+  border-bottom: none;
+}
+.pin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.pin-red {
+  background: var(--red);
+}
+.pin-blue {
+  background: var(--accent-blue);
+}
+.pin-green {
+  background: var(--green);
+}
+
+/* Events */
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.event-list li {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.88rem;
+}
+.event-list li:last-child {
+  border-bottom: none;
+}
+.event-icon {
+  color: var(--green);
+  flex-shrink: 0;
+}
+.event-meta {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+}
+
+/* Map card */
+.map-card .map-head {
+  background: var(--navy);
+  color: var(--white);
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.map-filters {
+  background: #243044;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+.map-filters span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dot-u {
+  background: var(--green);
+}
+.dot-l {
+  background: var(--accent-blue);
+}
+.dot-i {
+  background: #eab308;
+}
+
+.map-stage {
+  position: relative;
+  height: 340px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.map-stage #feed-map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-card .leaflet-container {
+  font-family: var(--font);
+  background: #cbd5e1;
+}
+
+.feed-leaflet-divicon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.feed-pin-marker {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--white);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
+  margin: 2px auto 0;
+}
+
+.map-card .leaflet-popup-content-wrapper {
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.map-card .leaflet-popup-content {
+  margin: 0.65rem 0.85rem;
+  line-height: 1.45;
+  font-size: 0.88rem;
+}
+
+.map-card .leaflet-bar a {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  font-size: 18px;
+}
+
+/* Chat */
+.chat-head {
+  background: var(--navy);
+  color: var(--white);
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+}
+.chat-body {
+  padding: 1rem;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.chat-msg strong {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+.chat-msg p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.chat-msg time {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+.chat-foot {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+.chat-foot input {
+  flex: 1;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font-family: inherit;
+  font-size: 1rem;
+  min-height: 44px;
+}
+.chat-foot button {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  min-height: 44px;
+  min-width: 4.5rem;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+}
+.chat-foot button:hover {
+  filter: brightness(1.05);
+}
+
+.feed-grid .card-overview {
+  grid-column: 1;
+  grid-row: 1;
+}
+.feed-grid .card-status {
+  grid-column: 1;
+  grid-row: 2;
+}
+.feed-grid .card-events {
+  grid-column: 1;
+  grid-row: 3;
+}
+.feed-grid .card-map {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.feed-grid .card-chat {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+@media (max-width: 1024px) {
+  .feed-grid .card-map,
+  .feed-grid .card-chat,
+  .feed-grid .card-overview,
+  .feed-grid .card-status,
+  .feed-grid .card-events {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* ========== Roles page ========== */
+.roles-page {
+  padding-bottom: 3rem;
+}
+.roles-hero {
+  background: var(--navy);
+  color: var(--white);
+  padding: 1.5rem 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.roles-hero h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.roles-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+.roles-section h2 {
+  margin: 0 0 1.25rem;
+  font-size: 1.1rem;
+  background: var(--navy);
+  color: white;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.role-card {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+}
+.role-card-head {
+  padding: 1rem 1.15rem;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  flex: 1;
+}
+.role-card-head.blue {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+.role-card-head.green {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+.role-card-head.orange {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+}
+.role-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+}
+
+/* ========== Admin CSWD ========== */
+.admin-top {
+  background: var(--navy);
+  color: var(--white);
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.admin-brand-text h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.admin-brand-text p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  align-items: center;
+}
+.admin-nav a {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid transparent;
+}
+.admin-nav a:hover {
+  color: var(--white);
+}
+.admin-nav a.is-active {
+  color: var(--white);
+  border-bottom-color: var(--accent-sky);
+}
+
+.admin-page {
+  padding: 1.25rem 1.5rem 2.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 900px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 1.15rem 1.25rem;
+}
+.kpi-card .num {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #1e3a5f;
+  line-height: 1.1;
+}
+.kpi-card .sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+.kpi-card .sub.ok {
+  color: var(--accent-blue);
+}
+.kpi-card .kpi-label {
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 900px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.15rem;
+}
+.chart-card h3 {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: #1e3a5f;
+}
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 200px;
+  padding-top: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.bar {
+  width: 100%;
+  max-width: 36px;
+  background: #3b82f6;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+}
+.bar-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.pie-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+.pie {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #f97316 0deg 144deg,
+    #3b82f6 144deg 252deg,
+    #eab308 252deg 324deg,
+    #1e40af 324deg 360deg
+  );
+  box-shadow: inset 0 0 0 28px var(--white);
+  flex-shrink: 0;
+}
+.pie-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+.pie-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.pie-legend .sw {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.tables-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 1024px) {
+  .tables-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.table-card {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.table-card h3 {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.data-table th,
+.data-table td {
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+.data-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.pill {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.pill-warn {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.table-foot {
+  padding: 0.6rem 1rem;
+  text-align: right;
+}
+.table-foot a {
+  color: var(--accent-blue);
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.35rem 0.5rem;
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.12);
+}
+
+.alert-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.65rem 0;
+}
+.alert-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+}
+.alert-list .ic {
+  font-size: 1rem;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 768px) {
+  .status-row {
+    grid-template-columns: 1fr;
+  }
+}
+.status-card h3 {
+  margin: 0;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  color: white;
+  background: #3b82f6;
+}
+.status-card .body {
+  padding: 0.5rem 0;
+}
+.dist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dist-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.dist-list .ok {
+  color: var(--green);
+  font-weight: 600;
+}
+.dist-list .transit {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+.dist-list .pend {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ---- Responsive: phones & tablets (Android / iOS / desktop) ---- */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.table-scroll .data-table {
+  min-width: 300px;
+}
+
+.admin-avatar-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-avatar-btn img {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: block;
+}
+
+.admin-nav {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 900px) {
+  .admin-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    padding-bottom: 0.35rem;
+    gap: 0.75rem 1rem;
+    scrollbar-width: thin;
+  }
+  .admin-nav a {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0.5rem 0.15rem 0.45rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .admin-top {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (max-width: 640px) {
+  .feed-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 0.75rem max(0.85rem, env(safe-area-inset-left, 0px)) 0.75rem
+      max(0.85rem, env(safe-area-inset-right, 0px));
+  }
+
+  .feed-brand h1 {
+    font-size: 0.82rem;
+    line-height: 1.25;
+    max-width: min(100%, 14rem);
+  }
+
+  .feed-sidebar {
+    flex-wrap: nowrap;
+    padding: 0.65rem max(0.5rem, env(safe-area-inset-left, 0px)) 0.65rem
+      max(0.5rem, env(safe-area-inset-right, 0px));
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .feed-sidebar nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    gap: 0.35rem;
+    padding: 0 0.25rem 0 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .feed-nav-item {
+    flex-shrink: 0;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .feed-sidebar-footer {
+    flex-shrink: 0;
+    width: auto;
+    border-top: none;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .feed-content {
+    padding: 1rem max(0.85rem, env(safe-area-inset-left, 0px)) calc(1.25rem + env(safe-area-inset-bottom, 0px))
+      max(0.85rem, env(safe-area-inset-right, 0px));
+  }
+
+  .feed-grid {
+    gap: 0.85rem;
+  }
+
+  .map-stage {
+    height: min(52vh, 320px);
+    min-height: 240px;
+  }
+
+  .map-card .leaflet-bar a {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 20px;
+  }
+
+  .roles-hero {
+    padding: 1.25rem max(1rem, env(safe-area-inset-left, 0px)) 1.5rem
+      max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  .roles-hero h1 {
+    font-size: 1.15rem;
+  }
+
+  .roles-section {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .admin-page {
+    padding-left: max(0.85rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.85rem, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .admin-brand-text h1 {
+    font-size: 0.88rem;
+    line-height: 1.25;
+  }
+
+  .bar-chart {
+    overflow-x: auto;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    padding-bottom: 0.35rem;
+  }
+
+  .bar-group {
+    flex: 0 0 52px;
+    min-width: 52px;
+  }
+
+  .dist-list li {
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+  }
+}
+
+/* ---- FEED feature pages (Alerts, Messages, Calendar, Settings) ---- */
+.feature-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.feature-page-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+.feature-page-sub {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.feature-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.feature-kpi {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  text-align: center;
+}
+.feature-kpi .n {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e3a5f;
+  line-height: 1.1;
+}
+.feature-kpi .lbl {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+.feature-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.alert-item {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-left: 4px solid var(--red);
+}
+.alert-item.warn {
+  border-left-color: var(--amber);
+}
+.alert-item.info {
+  border-left-color: var(--accent-blue);
+}
+.alert-item h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+.alert-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.alert-item time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.btn-sm {
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  min-height: 40px;
+}
+.btn-sm.primary {
+  background: var(--accent-blue);
+  color: white;
+}
+.btn-sm.ghost {
+  background: #f1f5f9;
+  color: var(--text);
+}
+
+.msg-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .msg-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.msg-threads {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.msg-threads h3 {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  background: var(--navy);
+  color: white;
+}
+.msg-thread-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.msg-thread-list li a {
+  display: block;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+}
+.msg-thread-list li a:hover {
+  background: #f8fafc;
+}
+.msg-thread-list .meta {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+.msg-panel {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.msg-panel-head {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.msg-panel-body {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  max-height: 360px;
+}
+.msg-bubble {
+  max-width: 85%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  margin-bottom: 0.65rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.msg-bubble.them {
+  background: #f1f5f9;
+  margin-right: auto;
+}
+.msg-bubble.me {
+  background: #dbeafe;
+  margin-left: auto;
+}
+.msg-compose {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+.msg-compose input {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 0.75rem;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.cal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.cal-toolbar strong {
+  font-size: 1rem;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  background: #e2e8f0;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.cal-dow {
+  background: var(--navy);
+  color: white;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.4rem 0.2rem;
+}
+.cal-cell {
+  background: var(--white);
+  min-height: 52px;
+  padding: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.cal-cell strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+.cal-cell.today {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+.cal-events {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+.cal-events h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+.cal-events ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cal-events li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+}
+
+.settings-group {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.settings-group h3 {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.settings-rows {
+  padding: 0.5rem 0;
+}
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.88rem;
+}
+.settings-row:last-child {
+  border-bottom: none;
+}
+.settings-row label {
+  font-weight: 500;
+}
+.toggle {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+.toggle.on {
+  background: var(--accent-blue);
+}
+.toggle::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.15s;
+}
+.toggle.on::after {
+  transform: translateX(20px);
+}
+.settings-row input[type="text"],
+.settings-row select {
+  min-width: 12rem;
+  max-width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.88rem;
+}
+
+.admin-page-title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1e3a5f;
+}
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.admin-toolbar input,
+.admin-toolbar select {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  min-height: 40px;
+}
+.btn-admin {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  background: var(--accent-blue);
+  color: white;
+  min-height: 40px;
+}
+.inventory-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.inv-stat {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+.inv-stat strong {
+  display: block;
+  font-size: 1.25rem;
+  color: #1e3a5f;
+  margin-bottom: 0.25rem;
+}
+.inv-stat .lbl {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+
+/* Single-file: top tabs use buttons */
+.site-switch button.nav-tab {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+.site-switch button.nav-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.site-switch button.nav-tab.is-active {
+  background: rgba(56, 189, 248, 0.25);
+  color: var(--white);
+}
+.app-view {
+  display: none !important;
+}
+.app-view.is-active {
+  display: block !important;
+}
+
+  </style>
+</head>
+<body>
+  <div class="site-switch">
+    <span>Pages</span>
+    <button type="button" class="nav-tab is-active" data-view="feed">FEED Dashboard</button>
+    <button type="button" class="nav-tab" data-view="roles">Roles &amp; Workflow</button>
+    <button type="button" class="nav-tab" data-view="admin">CSWD Admin</button>
+  </div>
+
+  <div id="view-feed" class="app-view is-active" data-view-panel="feed">
+<div class="feed-app">
+      <aside class="feed-sidebar">
+        <nav>
+          <a class="feed-nav-item is-active" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Dashboard
+          </a>
+          <a class="feed-nav-item" href="alerts.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Alerts
+          </a>
+          <a class="feed-nav-item" href="messages.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            Messages
+          </a>
+          <a class="feed-nav-item" href="calendar.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Calendar
+          </a>
+          <a class="feed-nav-item" href="settings.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            Settings
+          </a>
+        </nav>
+        <div class="feed-sidebar-footer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4" />
+          </svg>
+          <span style="font-size: 0.75rem">v1.0</span>
+        </div>
+      </aside>
+
+      <div class="feed-main-wrap">
+        <header class="feed-header">
+          <div class="feed-brand">
+            <div class="feed-logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <h1>FEED — Food Donation &amp; Distribution</h1>
+          </div>
+          <div class="feed-user">
+            <div class="feed-user-block">
+              <img
+                class="feed-avatar"
+                src="https://ui-avatars.com/api/?name=Captain+Santos&background=334155&color=fff"
+                width="42"
+                height="42"
+                alt=""
+              />
+              <div class="feed-user-info">
+                <strong>Brgy. Captain Santos</strong>
+                <small>San Andres</small>
+              </div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            <button type="button" class="feed-notify" aria-label="Notifications">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <main class="feed-content">
+          <div class="feed-grid">
+            <article class="card card-overview">
+              <div class="card-body">
+                <h2 class="card-title">Food Donation Overview</h2>
+                <div class="overview-metrics">
+                  <p>Total Food Packs Delivered: <strong id="metric-delivered">1,250</strong></p>
+                  <p>Areas Covered: <strong id="metric-covered">85%</strong></p>
+                  <p>Distribution Time: <strong id="metric-time">6 hrs</strong></p>
+                </div>
+                <div class="overview-banner">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                  Stock Remaining: <strong id="metric-stock">320 Packs</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="card card-status">
+              <div class="status-head">Barangay Status</div>
+              <ul class="status-list">
+                <li>
+                  <span class="pin pin-red" aria-hidden="true"></span>
+                  <span><strong>Brgy. 3:</strong> Food Distribution Needed</span>
+                </li>
+                <li>
+                  <span class="pin pin-blue" aria-hidden="true"></span>
+                  <span><strong>Brgy. 15:</strong> Food Delivery In Progress</span>
+                </li>
+                <li>
+                  <span class="pin pin-green" aria-hidden="true"></span>
+                  <span><strong>Island Barangay</strong> — Delivery En Route</span>
+                </li>
+              </ul>
+            </article>
+
+            <article class="card card-events">
+              <div class="card-body">
+                <h2 class="card-title">Upcoming Events</h2>
+                <ul class="event-list" id="upcoming-events">
+                  <li>
+                    <span class="event-icon" aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div>Relief Delivery – Brgy. 15</div>
+                      <div class="event-meta">Today · 9:00 AM</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="event-icon" aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div>Food Pack Distribution — Upland Barangay</div>
+                      <div class="event-meta">April 25 · 11:00 AM</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="event-icon" aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div>Supply Boat to Island Barangay</div>
+                      <div class="event-meta">April 26 · 2:00 PM</div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </article>
+
+            <article class="card card-map map-card">
+              <div class="map-head">Live Area Tracking</div>
+              <div class="map-filters">
+                <span><span class="dot dot-u" aria-hidden="true"></span> Upland</span>
+                <span><span class="dot dot-l" aria-hidden="true"></span> Lowland</span>
+                <span><span class="dot dot-i" aria-hidden="true"></span> Island</span>
+              </div>
+              <div class="map-stage" aria-label="Map: Catbalogan area tracking">
+                <div id="feed-map"></div>
+              </div>
+            </article>
+
+            <article class="card card-chat">
+              <div class="chat-head">Emergency Messages</div>
+              <div class="chat-body">
+                <div class="chat-msg">
+                  <strong>Sarah (Brgy. 15)</strong>
+                  <p>Running out of food packs over here, delivery team please hurry!</p>
+                  <time>10 mins ago</time>
+                </div>
+                <div class="chat-msg">
+                  <strong>Captain Torres</strong>
+                  <p>Got it, they are on their way!</p>
+                  <time>Just now</time>
+                </div>
+              </div>
+              <form class="chat-foot" action="#" method="get" onsubmit="return false">
+                <input type="text" placeholder="Type a message…" autocomplete="off" />
+                <button type="submit">Send</button>
+              </form>
+            </article>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-roles" class="app-view roles-page" data-view-panel="roles">
+<header class="roles-hero">
+      <div class="feed-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      </div>
+      <h1>FEED Roles</h1>
+    </header>
+
+    <section class="roles-section">
+      <h2>Roles</h2>
+      <div class="role-grid">
+        <article class="role-card">
+          <div class="role-card-head blue">
+            <div class="role-avatar" aria-hidden="true">👤</div>
+            <div>Admin (CSWD Officials)</div>
+          </div>
+        </article>
+        <article class="role-card">
+          <div class="role-card-head blue">
+            <div class="role-avatar" aria-hidden="true">👩‍💼</div>
+            <div>Staff (CSWD Support Team)</div>
+          </div>
+        </article>
+        <article class="role-card">
+          <div class="role-card-head green">
+            <div class="role-avatar" aria-hidden="true">🏘️</div>
+            <div>Barangay Officials</div>
+          </div>
+        </article>
+        <article class="role-card">
+          <div class="role-card-head orange">
+            <div class="role-avatar" aria-hidden="true">🤝</div>
+            <div>Volunteer Donors</div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <div id="view-admin" class="app-view" data-view-panel="admin">
+<header class="admin-top">
+      <div class="admin-brand">
+        <div class="feed-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+        </div>
+        <div class="admin-brand-text">
+          <h1>CSWD Disaster Relief Management System</h1>
+          <p>Catbalogan City, Samar</p>
+        </div>
+      </div>
+      <nav class="admin-nav" aria-label="Primary">
+        <a href="#" class="is-active">Admin Dashboard</a>
+        <a href="inventory.html">Inventory</a>
+        <a href="requests.html">Requests</a>
+        <a href="donations.html">Donations</a>
+        <a href="users.html">User Management</a>
+      </nav>
+      <button type="button" class="admin-avatar-btn" aria-label="Account menu">
+        <img
+          src="https://ui-avatars.com/api/?name=Admin+User&background=1e3a5f&color=fff"
+          width="40"
+          height="40"
+          alt=""
+        />
+      </button>
+    </header>
+
+    <main class="admin-page">
+      <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="num" id="admin-request-total">158</div>
+          <div class="sub ok">✓ 15 Pending</div>
+          <div class="kpi-label">Total Aid Requests</div>
+        </div>
+        <div class="kpi-card">
+            <div class="num" id="admin-stock-total">1,250</div>
+          <div class="sub">Packs in Stock</div>
+          <div class="kpi-label">Current Stock Levels</div>
+        </div>
+        <div class="kpi-card">
+            <div class="num" id="admin-donation-total">75</div>
+          <div class="sub">Donations Today</div>
+          <div class="kpi-label">Recent Donations</div>
+        </div>
+        <div class="kpi-card">
+            <div class="num" id="admin-area-total">12</div>
+          <div class="sub">Active Barangays</div>
+          <div class="kpi-label">Barangays Assisted</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3>Requests per Barangay</h3>
+          <div class="bar-chart" role="img" aria-label="Bar chart of requests by barangay">
+            <div class="bar-group">
+              <div class="bar" style="height: 72%"></div>
+              <span class="bar-label">Brgy. Basiao</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar" style="height: 100%"></div>
+              <span class="bar-label">Brgy. Mercedes</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar" style="height: 45%"></div>
+              <span class="bar-label">Brgy. Silanga</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar" style="height: 60%"></div>
+              <span class="bar-label">Brgy. Old Mahayag</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar" style="height: 35%"></div>
+              <span class="bar-label">Brgy. Guinsorongan</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar" style="height: 55%"></div>
+              <span class="bar-label">Brgy. Bagacay</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>Stock Overview</h3>
+          <div class="pie-row">
+            <div class="pie" role="img" aria-label="Pie chart: Rice 40%, Canned 30%, Water 20%, Other 10%"></div>
+            <ul class="pie-legend">
+              <li><span class="sw" style="background: #f97316"></span> Rice Packs — 40%</li>
+              <li><span class="sw" style="background: #3b82f6"></span> Canned Goods — 30%</li>
+              <li><span class="sw" style="background: #eab308"></span> Bottled Water — 20%</li>
+              <li><span class="sw" style="background: #1e40af"></span> Other Supplies — 10%</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="tables-row">
+        <div class="table-card">
+          <h3>Pending Aid Requests</h3>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Pending requests table, scroll horizontally if needed">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Barangay</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="admin-pending-requests">
+                <tr>
+                  <td>Maria Dela Cruz</td>
+                  <td>Brgy. Basiao</td>
+                  <td><span class="pill pill-warn">Pending</span></td>
+                </tr>
+                <tr>
+                  <td>Juan Santos</td>
+                  <td>Brgy. Mercedes</td>
+                  <td><span class="pill pill-warn">Pending</span></td>
+                </tr>
+                <tr>
+                  <td>Ana Reyes</td>
+                  <td>Brgy. Silanga</td>
+                  <td><span class="pill pill-warn">Pending</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-foot"><a href="#">View All</a></div>
+        </div>
+        <div class="table-card">
+          <h3>Recent Donation Logs</h3>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Donation logs table, scroll horizontally if needed">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Donor</th>
+                  <th>Barangay</th>
+                  <th>Items Donated</th>
+                </tr>
+              </thead>
+              <tbody id="admin-recent-donations">
+                <tr>
+                  <td>Carlos Reyes</td>
+                  <td>Brgy. Mercedes</td>
+                  <td>100 Rice Packs</td>
+                </tr>
+                <tr>
+                  <td>NGO Bayanihan</td>
+                  <td>City-wide</td>
+                  <td>200 Canned Goods</td>
+                </tr>
+                <tr>
+                  <td>Lina Cruz</td>
+                  <td>Brgy. Basiao</td>
+                  <td>50 Bottled Water</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-foot"><a href="#">View All</a></div>
+        </div>
+        <div class="table-card">
+          <h3>Inventory Alerts</h3>
+          <ul class="alert-list">
+            <li><span class="ic" aria-hidden="true">⚠️</span> Low Stock: Bottled Water</li>
+            <li><span class="ic" aria-hidden="true">⛔</span> Out of Stock: Canned Goods</li>
+            <li><span class="ic" aria-hidden="true">⚠️</span> Restock Needed: Rice Packs</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div class="status-card card">
+          <h3>Distribution Status</h3>
+          <div class="body">
+            <ul class="dist-list">
+              <li><span>Brgy. Basiao</span> <span class="ok">✓ Delivered</span></li>
+              <li><span>Brgy. Silanga</span> <span class="transit">In Transit</span></li>
+              <li><span>Brgy. Guinsorongan</span> <span class="pend">Pending Approval</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="status-card card">
+          <h3>Inventory Alerts</h3>
+          <div class="body">
+            <ul class="alert-list">
+              <li><span class="ic" aria-hidden="true">⚠️</span> Low Stock: Bottled Water</li>
+              <li><span class="ic" aria-hidden="true">⛔</span> Out of Stock: Canned Goods</li>
+              <li><span class="ic" aria-hidden="true">⚠️</span> Restock Needed: Rice Packs</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from './supabase-config.js';
+
+    const eventList = document.getElementById('upcoming-events');
+    const deliveredMetric = document.getElementById('metric-delivered');
+    const stockMetric = document.getElementById('metric-stock');
+    const adminRequestTotal = document.getElementById('admin-request-total');
+    const adminStockTotal = document.getElementById('admin-stock-total');
+    const adminDonationTotal = document.getElementById('admin-donation-total');
+    const adminAreaTotal = document.getElementById('admin-area-total');
+    const pendingRequests = document.getElementById('admin-pending-requests');
+    const recentDonations = document.getElementById('admin-recent-donations');
+
+    function text(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[character]));
+    }
+
+    function formatEventDate(value) {
+      return new Date(value).toLocaleString('en-US', {
+        month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit'
+      });
+    }
+
+    async function loadLiveDashboard() {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+
+      const [inventoryResult, donationsResult, eventsResult, requestsResult, areasResult] = await Promise.all([
+        supabase.from('inventory').select('quantity'),
+        supabase.from('donations').select('quantity, status'),
+        supabase.from('events').select('event_name, start_date, location').gte('start_date', new Date().toISOString()).order('start_date').limit(3),
+        supabase.from('requests').select('requester_name, barangay, status').order('created_at', { ascending: false }).limit(20),
+        supabase.from('distribution_points').select('id')
+      ]);
+
+      if (!inventoryResult.error && inventoryResult.data) {
+        const stock = inventoryResult.data.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+        stockMetric.textContent = `${stock.toLocaleString()} Packs`;
+      }
+      if (!donationsResult.error && donationsResult.data) {
+        const delivered = donationsResult.data.filter((item) => item.status === 'distributed').reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+        deliveredMetric.textContent = delivered.toLocaleString();
+        adminDonationTotal.textContent = donationsResult.data.length.toLocaleString();
+      }
+      if (!inventoryResult.error && inventoryResult.data) {
+        adminStockTotal.textContent = inventoryResult.data.reduce((total, item) => total + (Number(item.quantity) || 0), 0).toLocaleString();
+      }
+      if (!requestsResult.error && requestsResult.data) {
+        adminRequestTotal.textContent = requestsResult.data.length.toLocaleString();
+        pendingRequests.innerHTML = requestsResult.data.filter((item) => item.status === 'pending').slice(0, 3).map((item) => `<tr><td>${text(item.requester_name)}</td><td>${text(item.barangay)}</td><td><span class="pill pill-warn">${text(item.status)}</span></td></tr>`).join('') || '<tr><td colspan="3">No pending requests</td></tr>';
+      }
+      if (!areasResult.error && areasResult.data) {
+        adminAreaTotal.textContent = areasResult.data.length.toLocaleString();
+      }
+      if (!donationsResult.error && donationsResult.data && recentDonations) {
+        recentDonations.innerHTML = donationsResult.data.slice(0, 3).map((item) => `<tr><td>Donor</td><td>${text(item.barangay_allocated || 'City-wide')}</td><td>${text(item.quantity)} items</td></tr>`).join('') || '<tr><td colspan="3">No donations found</td></tr>';
+      }
+      if (!eventsResult.error && eventsResult.data?.length) {
+        eventList.innerHTML = eventsResult.data.map((event) => `<li><span class="event-icon" aria-hidden="true">&#128197;</span><div><div>${event.event_name}</div><div class="event-meta">${formatEventDate(event.start_date)} · ${event.location}</div></div></li>`).join('');
+      }
+    }
+
+    loadLiveDashboard().catch((error) => console.warn('Live dashboard data unavailable:', error.message));
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+(function () {
+  var feedMap = null;
+
+  function showView(name) {
+    document.querySelectorAll("[data-view-panel]").forEach(function (el) {
+      el.classList.toggle("is-active", el.getAttribute("data-view-panel") === name);
+    });
+    document.querySelectorAll(".site-switch .nav-tab").forEach(function (btn) {
+      btn.classList.toggle("is-active", btn.getAttribute("data-view") === name);
+    });
+    if (name === "feed") {
+      initFeedMap();
+      requestAnimationFrame(function () {
+        if (feedMap) feedMap.invalidateSize();
+      });
+    }
+  }
+
+  function initFeedMap() {
+    var el = document.getElementById("feed-map");
+    if (!el || typeof L === "undefined" || feedMap) {
+      if (feedMap) requestAnimationFrame(function () { feedMap.invalidateSize(); });
+      return;
+    }
+
+    feedMap = L.map("feed-map", { scrollWheelZoom: false }).setView([11.775, 124.886], 12);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(feedMap);
+
+    function pinIcon(fill) {
+      return L.divIcon({
+        className: "feed-leaflet-divicon",
+        html: '<div class="feed-pin-marker" style="background:' + fill + '" aria-hidden="true"></div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 24],
+        popupAnchor: [0, -22],
+      });
+    }
+
+    var stops = [
+      { pos: [11.798, 124.858], color: "#dc2626", title: "Brgy. 3", detail: "Food distribution needed", type: "Upland" },
+      { pos: [11.768, 124.898], color: "#3b82f6", title: "Brgy. 15", detail: "Food delivery in progress", type: "Lowland" },
+      { pos: [11.728, 124.932], color: "#16a34a", title: "Island barangay", detail: "Delivery en route", type: "Island" },
+    ];
+
+    stops.forEach(function (s) {
+      L.marker(s.pos, { icon: pinIcon(s.color) })
+        .addTo(feedMap)
+        .bindPopup(
+          "<strong>" + s.title + "</strong><br>" + s.detail +
+          '<br><span style="color:#64748b;font-size:12px">' + s.type + "</span>"
+        );
+    });
+
+    feedMap.fitBounds(
+      stops.map(function (s) { return s.pos; }),
+      { padding: [36, 36], maxZoom: 12 }
+    );
+
+    function reflow() {
+      if (feedMap) feedMap.invalidateSize();
+    }
+    requestAnimationFrame(reflow);
+    window.addEventListener("resize", reflow);
+  }
+
+  document.querySelectorAll(".site-switch .nav-tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var v = btn.getAttribute("data-view");
+      if (!v) return;
+      showView(v);
+      try {
+        history.replaceState(null, "", "#" + v);
+      } catch (e) {}
+    });
+  });
+
+  if (location.hash === "#roles") showView("roles");
+  else if (location.hash === "#admin") showView("admin");
+  else showView("feed");
+
+  window.addEventListener("hashchange", function () {
+    var h = location.hash.slice(1);
+    if (h === "roles" || h === "admin" || h === "feed") showView(h);
+  });
+})();
+  </script>
+</body>
+</html>
